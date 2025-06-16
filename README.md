@@ -17,15 +17,13 @@ llm_validator/
 ├── requirements.txt
 ├── prompts/
 │   └── qa_unified_prompt.txt
-├── model_to_validate/
-│   ├── app.py
-│   └── prompts_used.json
+├── model_to_validate/   
+│    └── LLM1 # Model to validate
+│           ├── app.py
+│           └── prompts_used.json
 ├── results/
-│   └── validation_report.md
-├── generated/
-│   ├── missing_tests.py
-│   ├── improved_prompts.json
-│   └── drift_monitor.py
+│   └── validation_report_<model_name>_<timestamp>.md
+├── generated/     # Generated files
 ├── manifest.yaml  # Optional
 ```
 
@@ -61,18 +59,20 @@ ollama pull llama3
 
 #### Validate a single file:
 ```bash
-python3 validator.py --mode=validate --file model_to_validate/app.py
+python3 validator.py --mode=validate --file model_to_validate/app.py --model llama3
 ```
 
 #### Validate an entire folder:
 ```bash
-python3 validator.py --mode=validate --dir model_to_validate/
+python3 validator.py --mode=validate --dir model_to_validate/ --model llama3
 ```
 
 #### Validate using a manifest file:
 ```bash
-python3 validator.py --mode=validate --manifest
+python3 validator.py --mode=validate --manifest --model llama3
 ```
+
+> 🧠 You can also use `--model mistral` or any other local Ollama-supported model.
 
 🧾 Output:
 ```
@@ -91,6 +91,14 @@ python3 validator.py --mode=generate
 - `generated/missing_tests.py`
 - `generated/improved_prompts.json`
 - `generated/drift_monitor.py`
+
+You'll also get a generation summary like:
+```
+🔍 Generation Summary:
+- Tests: ✅
+- Prompts: ❌ (missing or empty)
+- Drift Monitor: ✅
+```
 
 ---
 
@@ -119,7 +127,7 @@ python3 validator.py --mode=generate
 ## 🧪 Example Run
 
 ```bash
-python3 validator.py --mode=validate --dir model_to_validate/
+python3 validator.py --mode=validate --dir model_to_validate/ --model llama3
 python3 validator.py --mode=generate
 ```
 

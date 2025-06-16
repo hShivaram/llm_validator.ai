@@ -3,6 +3,7 @@ import argparse
 import subprocess
 from pathlib import Path
 import sys
+from datetime import datetime
 
 PROMPTS_DIR = Path("prompts")
 MODEL_DIR = Path("model_to_validate")
@@ -17,7 +18,12 @@ def load_code_sources(file=None, directory=None, manifest=None):
     code_segments = []
 
     if file:
-        code_segments.append(Path(file).read_text())
+        file_path = Path(file)
+        if file_path.is_file():
+            code_segments.append(file_path.read_text())
+        else:
+            print(f"❌ Provided path for --file is a directory: {file_path}. Please use --dir instead.")
+            sys.exit(1)
     elif directory:
         for file in Path(directory).rglob("*.py"):
             code_segments.append(file.read_text())
@@ -58,26 +64,66 @@ def validate(args):
     prompt = f"{prompt_template}\n\n# Codebase:\n" + "\n\n".join(code)
     output = run_ollama(prompt, args.model)
     RESULTS_DIR.mkdir(exist_ok=True)
-    (RESULTS_DIR / "validation_report.md").write_text(output)
-    print("✅ Validation report saved to results/validation_report.md")
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    report_filename = f"validation_report_{args.model}_{timestamp}.md"
+    (RESULTS_DIR / report_filename).write_text(output)
+    print(f"✅ Validation report saved to results/{report_filename}")
+
+def extract_app_name(path):
+    """Extract the app name from the provided path."""
+    # Get the parent directory name if it's a file, otherwise use the directory name
+    path = Path(path)
+    if path.is_file():
+        return path.parent.name
+    return path.name
 
 
 def generate():
-    report = (RESULTS_DIR / "validation_report.md").read_text()
-    # Split the output into sections
+    # Locate the latest validation report
+    latest_file = max(RESULTS_DIR.glob("validation_report_*.md"), key=lambda f: f.stat().st_mtime, default=None)
+    if not latest_file:
+        print("❌ No validation report found in results/. Please run in --mode=validate first.")
+        sys.exit(1)
+
+    report = latest_file.read_text()
     tests = prompts = drift = ""
+    status = {"tests": False, "prompts": False, "drift": False}
+
+    # Parse sections
     if "--- GENERATED_TESTS ---" in report:
         tests = report.split("--- GENERATED_TESTS ---")[1].split("--- REWRITTEN_PROMPTS ---")[0].strip()
+        status["tests"] = True
     if "--- REWRITTEN_PROMPTS ---" in report:
         prompts = report.split("--- REWRITTEN_PROMPTS ---")[1].split("--- DRIFT_MONITOR ---")[0].strip()
+        status["prompts"] = True
     if "--- DRIFT_MONITOR ---" in report:
         drift = report.split("--- DRIFT_MONITOR ---")[1].strip()
+        status["drift"] = True
 
-    GENERATED_DIR.mkdir(exist_ok=True)
-    (GENERATED_DIR / "missing_tests.py").write_text(tests)
-    (GENERATED_DIR / "improved_prompts.json").write_text(prompts)
-    (GENERATED_DIR / "drift_monitor.py").write_text(drift)
-    print("✅ Generated missing components in /generated folder")
+    # For each app inside MODEL_DIR, generate fixes
+    for app_dir in MODEL_DIR.iterdir():
+        if not app_dir.is_dir():
+            continue
+        app_name = app_dir.name
+        for file_path in app_dir.rglob("*.py"):
+            # Build output folder based on app and file structure
+            relative = file_path.relative_to(app_dir)
+            module_folder = GENERATED_DIR / app_name / relative.parent / relative.stem
+            module_folder.mkdir(parents=True, exist_ok=True)
+
+            # Write generated artifacts per file
+            if status["tests"]:
+                (module_folder / "missing_tests.py").write_text(tests)
+            if status["prompts"]:
+                (module_folder / "improved_prompts.json").write_text(prompts)
+            if status["drift"]:
+                (module_folder / "drift_monitor.py").write_text(drift)
+
+    print(f"✅ Generated missing components under /generated/ for all apps in '{MODEL_DIR.name}'")
+    print("Generation Summary per file:")
+    print(f"- Tests: {'✅' if status['tests'] and tests else '❌ (missing or empty)'}")
+    print(f"- Prompts: {'✅' if status['prompts'] and prompts else '❌ (missing or empty)'}")
+    print(f"- Drift Monitor: {'✅' if status['drift'] and drift else '❌ (missing or empty)'}")
 
 
 def main():
