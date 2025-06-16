@@ -1,6 +1,7 @@
 # 🤖 LLM QA Validator Tool
 
-A plug-and-play QA automation tool designed to validate and improve LLM, RAG, or model-based pipelines.  
+A plug-and-play QA automation tool designed to validate and improve LLM, RAG, or model-based pipelines.
+Example LLM apps are provided under `model_to_validate/` so you can try the validator end-to-end.
 It scans code using a local LLM via [Ollama](https://ollama.com) and provides:
 - Test coverage audit
 - Prompt risk analysis
@@ -17,10 +18,13 @@ llm_validator/
 ├── requirements.txt
 ├── prompts/
 │   └── qa_unified_prompt.txt
-├── model_to_validate/   
-│    └── LLM1 # Model to validate
-│           ├── app.py
-│           └── prompts_used.json
+├── model_to_validate/
+│   ├── sentiment_analysis/
+│   │   ├── app.py
+│   │   └── prompts_used.json
+│   └── sumarrizer/
+│       ├── LLM.py
+│       └── prompts_used.json
 ├── results/
 │   └── validation_report_<model_name>_<timestamp>.md
 ├── generated/     # Generated files
@@ -121,6 +125,14 @@ You'll also get a generation summary like:
 | No model found | Run `ollama pull llama3` |
 | Output empty | Ensure prompt file exists and input code is valid |
 | Prompt injection warning | Refactor or use generated prompts |
+
+---
+
+### Running Tests
+
+```bash
+pytest -q
+```
 
 ---
 

@@ -1,4 +1,5 @@
 transformers==4.41.1      # For sentiment-analysis pipeline in app.py
 pyyaml==6.0.1             # For reading manifest.yaml
 ollama                    # Assumes Ollama CLI is installed separately
+pytest
 
