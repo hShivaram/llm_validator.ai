@@ -1,0 +1,6 @@
+entry_points:
+  - model_to_validate/app.py
+  - model_to_validate/utils.py
+ignore:
+  - model_to_validate/tests/
+  - model_to_validate/legacy/
